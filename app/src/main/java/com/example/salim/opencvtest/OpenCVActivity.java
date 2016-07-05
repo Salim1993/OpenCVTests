@@ -1,5 +1,6 @@
 package com.example.salim.opencvtest;
 
+import android.content.Context;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;import android.util.Log;
 import android.view.MenuItem;
@@ -19,6 +20,20 @@ import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
+/**
+ * Created by Salim Ben Khaled
+ *
+ * Using notes of:
+ * http://www.jayrambhia.com/blog/android-opencv-facedetection
+ */
+
+
 //Implement the OpenCV class CvCameraViewListener2 to allow OpenCV to communicate with android camera functionalities.
 public class OpenCVActivity extends AppCompatActivity implements CvCameraViewListener2 {
 
@@ -37,6 +52,15 @@ public class OpenCVActivity extends AppCompatActivity implements CvCameraViewLis
     Mat mRgbaF;
     Mat mRgbaT;
 
+    // Input and Output streams for the xml classifier
+    private InputStream faceInputStream;
+    private OutputStream faceOutputStream;
+
+
+    //To load in OpenCV manager package
+    //static{ System.loadLibrary("opencv_java"); }
+    //static { if (!OpenCVLoader.initDebug()) { Log.w(TAG, "Issue with loading OpenCV Manager"); }}
+
     //when the activity is created, display the OpenCV camera in the layout. show_camera.xml
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +75,23 @@ public class OpenCVActivity extends AppCompatActivity implements CvCameraViewLis
         mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
 
         mOpenCvCameraView.setCvCameraViewListener(this);
+
+        //Reading in the xml file
+        try{
+            faceInputStream = getResources().getAssets().open("lbpcascade_frontalface.xml");
+            File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
+            File mCascadeFile = new File(cascadeDir, "face_frontal.xml");
+
+            faceOutputStream = new FileOutputStream(mCascadeFile);
+
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = faceInputStream.read(buffer)) != -1){
+                faceOutputStream.write(buffer,0,bytesRead);
+            }
+        } catch (IOException e){
+            Log.i(TAG, "face cascade xml not found.");
+        }
     }
 
     @Override
@@ -98,25 +139,35 @@ public class OpenCVActivity extends AppCompatActivity implements CvCameraViewLis
         }
     };
 
-    public void MainActivity_show_camera() {
+    public OpenCVActivity() {
         Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
     //Receive Image Data when the camera preview starts on your screen
     @Override
     public void onCameraViewStarted(int width, int height) {
-
+        mRgba = new Mat(height, width, CvType.CV_8UC4);
+        mRgbaF = new Mat(height, width, CvType.CV_8UC4);
+        mRgbaT = new Mat(width, width, CvType.CV_8UC4);
     }
 
     //Destroy image data when you stop camera preview on your phone screen
     @Override
     public void onCameraViewStopped() {
-
+        mRgba.release();
     }
 
     //Orient the camera
     @Override
     public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
-        return null;
+
+        // TODO Auto-generated method stub
+        mRgba = inputFrame.rgba();
+        // Rotate mRgba 90 degrees
+        Core.transpose(mRgba, mRgbaT);
+        Imgproc.resize(mRgbaT, mRgbaF, mRgbaF.size(), 0,0, 0);
+        Core.flip(mRgbaF, mRgba, 1 );
+
+        return mRgba;
     }
 }

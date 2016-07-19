@@ -170,4 +170,9 @@ public class OpenCVActivity extends AppCompatActivity implements CvCameraViewLis
 
         return mRgba;
     }
+
+    static {
+        System.loadLibrary("opencv-jni");
+    }
+    public native String getMsgFromJni();
 }
